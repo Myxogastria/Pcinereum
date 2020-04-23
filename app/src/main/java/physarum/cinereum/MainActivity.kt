@@ -1,20 +1,29 @@
 package physarum.cinereum
 
+import android.content.Context
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
+import android.view.Display
+import android.view.Surface
 import android.view.View
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.TextView
+import androidx.lifecycle.ViewModelProviders
 
 class MainActivity : AppCompatActivity() {
-    private var chatStringBuilder = ChatStringBuilder()
-    private var lang = "US"
-    public val phraseUs: Array<String> = arrayOf("Hello", "OK", "Help!", "Thank you")
-    public val phraseJp: Array<String> = arrayOf("こんにちは", "OK", "助けて!", "ありがとう")
+    private var viewModel = ChatViewModel()
+    companion object{
+        val phraseUs: Array<String> = arrayOf("Hello", "OK", "Help!", "Thank you")
+        val phraseJp: Array<String> = arrayOf("こんにちは", "OK", "助けて!", "ありがとう")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        viewModel = ViewModelProviders.of(this).get(ChatViewModel::class.java)
 
         val bt1 = findViewById<Button>(R.id.button1)
         val bt2 = findViewById<Button>(R.id.button2)
@@ -26,23 +35,38 @@ class MainActivity : AppCompatActivity() {
         bt3.setOnClickListener(ButtonListener(2))
         bt4.setOnClickListener(ButtonListener(3))
 
-        setLang("JP")
+        val windowManager: WindowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val display: Display = windowManager.defaultDisplay
+
+        Log.i("rotation", "${display.rotation}")
+
+        if((display.rotation == Surface.ROTATION_0) || (display.rotation == Surface.ROTATION_90)){
+            viewModel.userName = "なおこ"
+            viewModel.lang = "JP"
+            setLang("JP")
+        }else if((display.rotation == Surface.ROTATION_180) || (display.rotation == Surface.ROTATION_270)){
+            viewModel.userName  = "Alice"
+            viewModel.lang = "US"
+            setLang("US")
+        }
+
+        updateChat()
     }
 
     private fun setLang(lang: String){
-        this.lang = lang
+        viewModel.lang = lang
 
         val bt1 = findViewById<Button>(R.id.button1)
         val bt2 = findViewById<Button>(R.id.button2)
         val bt3 = findViewById<Button>(R.id.button3)
         val bt4 = findViewById<Button>(R.id.button4)
 
-        if(lang == "US"){
+        if(viewModel.lang == "US"){
             bt1.text = phraseUs[0]
             bt2.text = phraseUs[1]
             bt3.text = phraseUs[2]
             bt4.text = phraseUs[3]
-        }else if(lang == "JP"){
+        }else if(viewModel.lang == "JP"){
             bt1.text = phraseJp[0]
             bt2.text = phraseJp[1]
             bt3.text = phraseJp[2]
@@ -54,32 +78,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateChat(){
         val output = findViewById<TextView>(R.id.tvChat)
-        output.text = chatStringBuilder.getString(lang)
+        output.text = viewModel.chatStringBuilder.getString(viewModel.lang)
     }
 
     private inner class ButtonListener(val btId: Int) : View.OnClickListener{
         override fun onClick(v: View?) {
-            chatStringBuilder.send("Alice", btId)
+            viewModel.chatStringBuilder.send(viewModel.userName, btId)
             updateChat()
         }
     }
 
-    private inner class ChatStringBuilder{
-        var chatArrayList = ArrayList<Pair<String, Int>>()
-        fun send(sender: String, phraseId: Int){
-            chatArrayList.add(Pair(sender, phraseId))
-        }
-
-        fun getString(lang: String): String{
-            var chatString = ""
-            for(pair in chatArrayList){
-                if(lang == "US"){
-                    chatString += "${pair.first}: ${phraseUs[pair.second]}\n"
-                }else if(lang == "JP"){
-                    chatString += "${pair.first}: ${phraseJp[pair.second]}\n"
-                }
-            }
-            return chatString
-        }
-    }
 }
